@@ -6,12 +6,176 @@
     <title>Kalkulator JWS & LED Display</title>
     <!-- Tailwind CSS untuk tampilan modern -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Digital Seven Segment -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
+    <style>
+        /* Efek Dot Matrix LED */
+        .p10-screen {
+            background-color: #020617;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 0);
+            background-size: 5px 5px;
+            border: 5px solid #1e293b;
+            box-shadow: inset 0 0 14px #000;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            white-space: nowrap;
+            transition: width 0.25s ease-out, height 0.25s ease-out;
+        }
+
+        /* Wadah & Animasi Running Text Mulus */
+        .p10-marquee-box {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            white-space: nowrap;
+        }
+        .p10-marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: p10-scroll 24s linear infinite;
+        }
+        @keyframes p10-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Animasi Roll Up / Roll Down untuk Panel <= 4 */
+        .roll-viewport {
+            height: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+        .roll-content {
+            display: flex;
+            flex-direction: column;
+            animation: roll-vertical 15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+        .roll-item {
+            height: 24px;
+            line-height: 24px;
+            display: flex;
+            align-items: center;
+        }
+        @keyframes roll-vertical {
+            0%, 15%   { transform: translateY(0); }
+            20%, 35%  { transform: translateY(-24px); }
+            40%, 55%  { transform: translateY(-48px); }
+            60%, 75%  { transform: translateY(-72px); }
+            80%, 95%  { transform: translateY(-96px); }
+            100%      { transform: translateY(0); }
+        }
+
+        /* Kedip Titik Dua Detik */
+        .blink-colon {
+            animation: colon-fade 1s steps(1, start) infinite;
+        }
+        @keyframes colon-fade {
+            50% { opacity: 0.15; }
+        }
+
+        /* Warna Emisi Lampu LED */
+        .led-white   { color: #ffffff; text-shadow: 0 0 5px #ffffff, 0 0 10px #cbd5e1; }
+        .led-cyan    { color: #00f0ff; text-shadow: 0 0 5px #00f0ff, 0 0 10px #0284c7; }
+        .led-magenta { color: #ff007f; text-shadow: 0 0 5px #ff007f, 0 0 10px #be185d; }
+        .led-red     { color: #ff2222; text-shadow: 0 0 5px #ff2222, 0 0 10px #b91c1c; }
+        .led-blue    { color: #38bdf8; text-shadow: 0 0 5px #38bdf8, 0 0 10px #0284c7; }
+        .led-yellow  { color: #facc15; text-shadow: 0 0 5px #facc15, 0 0 10px #854d0e; }
+        .led-green   { color: #4ade80; text-shadow: 0 0 5px #4ade80, 0 0 10px #166534; }
+
+        /* Animasi 2 Baris Bertahap 2 Panel (5 Shalat + 1 Running Text) */
+        .stage-viewport-2p {
+            height: 48px;
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+        }
+        .stage-slider-2p {
+            display: flex;
+            flex-direction: column;
+            animation: cycle-stages-2p 24s infinite;
+        }
+        .stage-item-shalat {
+            height: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.1;
+        }
+        .stage-item-marquee {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        @keyframes cycle-stages-2p {
+            0%, 12.5%    { transform: translateY(0); }
+            16.6%, 29.1% { transform: translateY(-48px); }
+            33.3%, 45.8% { transform: translateY(-96px); }
+            50%, 62.5%   { transform: translateY(-144px); }
+            66.6%, 79.1% { transform: translateY(-192px); }
+            83.3%, 97%   { transform: translateY(-240px); }
+            100%         { transform: translateY(0); }
+        }
+
+        /* Tampilan Font Digital 7-Segment */
+        .seven-seg {
+            font-family: 'DSEG7-Classic', monospace !important;
+            font-style: italic;
+            letter-spacing: 2px;
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
     <div class="max-w-5xl mx-auto p-6 my-8 bg-white shadow-lg rounded-xl">
         <h1 class="text-2xl font-bold text-slate-900 mb-2">⚡ Kalkulator JWS & LED Display</h1>
         <p class="text-sm text-slate-500 mb-6">Hitung kebutuhan modul, power supply, controller, material mekanikal (frame, pangkon, galvalum), hingga estimasi harga jual.</p>
+
+        <!-- ================= SIMULATOR DISPLAY LED ================= -->
+        <div class="mb-6 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-inner">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold tracking-wider text-slate-300 uppercase">🖥️ Simulasi Visual Display</span>
+                    <span id="simulatorTag" class="text-xs bg-blue-600 text-white font-semibold px-2 py-0.5 rounded">7 Kolom x 1 Baris</span>
+                </div>
+
+                <!-- Panel Pengaturan Tampilan Realtime -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <!-- Toggle Format Jam -->
+                    <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+                        <span class="text-slate-400 px-2 font-medium">Format Jam:</span>
+                        <button type="button" id="btnClockHM" onclick="setTimeFormat('hm')" class="px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition">HH:mm</button>
+                        <button type="button" id="btnClockHMS" onclick="setTimeFormat('hms')" class="px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition">+Detik</button>
+                    </div>
+
+                    <!-- Toggle Mode Warna -->
+                    <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+                        <span class="text-slate-400 px-2 font-medium">Warna:</span>
+                        <button type="button" id="btnColorFull" onclick="setColorMode('full')" class="px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition">RGB Full</button>
+                        <button type="button" id="btnColorSingle" onclick="setColorMode('single')" class="px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition">Single</button>
+                    </div>
+
+                    <!-- Dropdown Pilihan Single Color -->
+                    <select id="singleColorPicker" onchange="updateJWSSimulator()" class="hidden bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 outline-none">
+                        <option value="led-red">Merah</option>
+                        <option value="led-green">Hijau</option>
+                        <option value="led-blue">Biru</option>
+                        <option value="led-yellow">Kuning</option>
+                        <option value="led-white">Putih</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto p-2 bg-black rounded-lg flex justify-center items-center min-h-[140px]">
+                <div id="p10Screen" class="p10-screen flex items-center px-4 box-border">
+                    <!-- Konten simulator di-generate via JavaScript -->
+                </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 text-center">*Font jam utama seven-segment digital. Titik dua pada format HH:mm berkedip per detik.</p>
+        </div>
+        <!-- ========================================================= -->
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Form Input -->
@@ -21,11 +185,11 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Kolom (Samping)</label>
-                        <input type="number" id="cols" value="11" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="cols" value="7" min="1" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Baris (Bawah)</label>
-                        <input type="number" id="rows" value="5" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="rows" value="1" min="1" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
 
@@ -33,8 +197,8 @@
                     <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Jenis Modul LED</label>
                     <select id="moduleType" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value="p10_single">P10 Single Color (32x16 px)</option>
-                        <option value="p10_rgb">P10 RGB Outdoor (32x16 px)</option>
-                        <option value="p5_rgb">P5 RGB Indoor (64x32 px)</option>
+                        <option value="p10_rgb">P10 RGB Outdoor (32x16 px) - Full Color</option>
+                        <option value="p5_rgb">P5 RGB Indoor (64x32 px) - Full Color</option>
                     </select>
                 </div>
 
@@ -128,14 +292,256 @@
     </div>
 
     <script>
-        // Fungsi helper untuk mengubah string "85.000" menjadi angka 85000
+        // Variabel State Toggle Display
+        let timeDisplayFormat = 'hm'; // 'hm' atau 'hms'
+        let displayColorMode = 'full'; // 'full' atau 'single'
+
+        function setTimeFormat(format) {
+            timeDisplayFormat = format;
+            const btnHM = document.getElementById('btnClockHM');
+            const btnHMS = document.getElementById('btnClockHMS');
+            if (format === 'hm') {
+                btnHM.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnHMS.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+            } else {
+                btnHMS.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnHM.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+            }
+            updateClockOnly();
+        }
+
+        function setColorMode(mode) {
+            displayColorMode = mode;
+            const btnFull = document.getElementById('btnColorFull');
+            const btnSingle = document.getElementById('btnColorSingle');
+            const picker = document.getElementById('singleColorPicker');
+            const moduleSelect = document.getElementById('moduleType');
+
+            if (mode === 'full') {
+                btnFull.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnSingle.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+                picker.classList.add('hidden');
+                if (moduleSelect.value === 'p10_single') {
+                    moduleSelect.value = 'p10_rgb';
+                    syncPricesByModule();
+                }
+            } else {
+                btnSingle.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnFull.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+                picker.classList.remove('hidden');
+                if (moduleSelect.value !== 'p10_single') {
+                    moduleSelect.value = 'p10_single';
+                    syncPricesByModule();
+                }
+            }
+            updateJWSSimulator();
+        }
+
+        // Sinkronisasi otomatis harga komponen saat berganti Single Color / RGB Full Color
+        function syncPricesByModule() {
+            const moduleType = document.getElementById('moduleType').value;
+            const pricePanelInput = document.getElementById('pricePanel');
+            const priceControllerInput = document.getElementById('priceController');
+
+            if (moduleType === 'p10_rgb') {
+                displayColorMode = 'full';
+                pricePanelInput.value = '150.000';
+                priceControllerInput.value = '450.000';
+            } else if (moduleType === 'p5_rgb') {
+                displayColorMode = 'full';
+                pricePanelInput.value = '130.000';
+                priceControllerInput.value = '450.000';
+            } else {
+                displayColorMode = 'single';
+                pricePanelInput.value = '85.000';
+                priceControllerInput.value = '250.000';
+            }
+
+            const btnFull = document.getElementById('btnColorFull');
+            const btnSingle = document.getElementById('btnColorSingle');
+            const picker = document.getElementById('singleColorPicker');
+            if (displayColorMode === 'full') {
+                btnFull.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnSingle.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+                picker.classList.add('hidden');
+            } else {
+                btnSingle.className = 'px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition';
+                btnFull.className = 'px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white transition';
+                picker.classList.remove('hidden');
+            }
+
+            hitungKalkulasi();
+        }
+
+        // Helper Waktu Realtime
+        function getRealtimeJWS() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu'];
+            
+            return {
+                h: pad(now.getHours()),
+                m: pad(now.getMinutes()),
+                s: pad(now.getSeconds()),
+                dateFull: `${days[now.getDay()]}, ${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`
+            };
+        }
+
+        // Update HANYA jam setiap detik (mencegah marquee me-reset animasi)
+        function updateClockOnly() {
+            const clockEl = document.getElementById('liveClock');
+            if (!clockEl) return;
+
+            const cols = parseInt(document.getElementById('cols').value) || 1;
+            const { h, m, s } = getRealtimeJWS();
+            const singleColorClass = document.getElementById('singleColorPicker').value;
+            const activeColorClass = (displayColorMode === 'single') ? singleColorClass : 'led-white';
+
+            clockEl.className = `${clockEl.getAttribute('data-base-class')} ${activeColorClass}`;
+
+            if (cols === 2 || timeDisplayFormat === 'hm') {
+                clockEl.innerHTML = `${h}<span class="blink-colon">:</span>${m}`;
+            } else {
+                clockEl.innerHTML = `${h}:${m}:${s}`;
+            }
+        }
+        setInterval(updateClockOnly, 1000);
+
+        // Render Komponen Visual Simulator
+        function updateJWSSimulator() {
+            const cols = parseInt(document.getElementById('cols').value) || 1;
+            const rows = parseInt(document.getElementById('rows').value) || 1;
+            const screen = document.getElementById('p10Screen');
+            const tag = document.getElementById('simulatorTag');
+
+            if (tag) {
+                tag.innerText = `${cols} Kolom x ${rows} Baris (${cols * 32} x ${rows * 16} cm)`;
+            }
+
+            // Skala modul P10
+            const baseWidthPerCol = 100;
+            const baseHeightPerRow = 52;
+            screen.style.width = `${cols * baseWidthPerCol}px`;
+            screen.style.height = `${rows * baseHeightPerRow}px`;
+
+            const { h, m, s, dateFull } = getRealtimeJWS();
+            
+            // Penentuan Warna Dinamis (Full Color vs Single Color)
+            const singleColor = document.getElementById('singleColorPicker').value;
+            const cWhite = (displayColorMode === 'single') ? singleColor : 'led-white';
+            const cCyan = (displayColorMode === 'single') ? singleColor : 'led-cyan';
+            const cYellow = (displayColorMode === 'single') ? singleColor : 'led-yellow';
+            const cGreen = (displayColorMode === 'single') ? singleColor : 'led-green';
+            const cMagenta = (displayColorMode === 'single') ? singleColor : 'led-magenta';
+            const cRed = (displayColorMode === 'single') ? singleColor : 'led-red';
+            const cBlue = (displayColorMode === 'single') ? singleColor : 'led-blue';
+
+            const subFontSize = rows > 1 ? 'text-xs' : 'text-[11px]';
+
+            // ================= 1 PANEL =================
+            if (cols === 1) {
+                const clockHTML = (timeDisplayFormat === 'hms') 
+                    ? `${h}:${m}:${s}` 
+                    : `${h}<span class="blink-colon">:</span>${m}`;
+                
+                screen.innerHTML = `
+                    <div class="flex items-center justify-center w-full h-full">
+                        <div id="liveClock" data-base-class="seven-seg text-3xl tracking-wider" class="seven-seg text-3xl tracking-wider ${cWhite}">
+                            ${clockHTML}
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            // ================= 2 PANEL =================
+            if (cols === 2) {
+                const clockHM = `${h}<span class="blink-colon">:</span>${m}`;
+
+                screen.innerHTML = `
+                    <div class="flex items-center w-full h-full justify-between">
+                        <!-- Kiri: Jam Jumbo Digital (Jam & Menit) -->
+                        <div id="liveClock" data-base-class="seven-seg text-3xl pr-2 mr-2 border-r-2 border-slate-700 flex-shrink-0" class="seven-seg text-3xl pr-2 mr-2 border-r-2 border-slate-700 flex-shrink-0 ${cWhite}">
+                            ${clockHM}
+                        </div>
+
+                        <!-- Kanan: Siklus 5 Waktu Shalat & Running Text -->
+                        <div class="stage-viewport-2p">
+                            <div class="stage-slider-2p font-bold text-center">
+                                <div class="stage-item-shalat"><span class="${cCyan} text-[11px] tracking-wider">SUBUH</span><span class="${cWhite} text-[13px]">04:28</span></div>
+                                <div class="stage-item-shalat"><span class="${cYellow} text-[11px] tracking-wider">DZUHUR</span><span class="${cWhite} text-[13px]">11:55</span></div>
+                                <div class="stage-item-shalat"><span class="${cGreen} text-[11px] tracking-wider">ASHAR</span><span class="${cWhite} text-[13px]">15:12</span></div>
+                                <div class="stage-item-shalat"><span class="${cMagenta} text-[11px] tracking-wider">MAGHRIB</span><span class="${cWhite} text-[13px]">18:05</span></div>
+                                <div class="stage-item-shalat"><span class="${cCyan} text-[11px] tracking-wider">ISYA'</span><span class="${cWhite} text-[13px]">19:14</span></div>
+                                <div class="stage-item-marquee">
+                                    <div class="p10-marquee-box text-[11px]">
+                                        <span class="p10-marquee-text ${cBlue}" style="animation-duration: 9s;">
+                                            ${dateFull} • RAPATKAN SHAF • MATIKAN HP
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            // ================= 3 PANEL KE ATAS =================
+            const initialClock = (timeDisplayFormat === 'hms') 
+                ? `${h}:${m}:${s}` 
+                : `${h}<span class="blink-colon">:</span>${m}`;
+
+            const clockFontSize = (rows > 1) ? 'text-5xl' : 'text-4xl';
+
+            // Roll Jadwal Sholat untuk Panel 3-4
+            const rollShalatHtml = `
+                <div class="roll-viewport">
+                    <div class="roll-content font-bold">
+                        <div class="roll-item"><span class="${cCyan}">SUBUH</span>&nbsp;<span class="${cWhite}">04:28</span></div>
+                        <div class="roll-item"><span class="${cYellow}">DZUHUR</span>&nbsp;<span class="${cWhite}">11:55</span></div>
+                        <div class="roll-item"><span class="${cGreen}">ASHAR</span>&nbsp;<span class="${cWhite}">15:12</span></div>
+                        <div class="roll-item"><span class="${cMagenta}">MAGHRIB</span>&nbsp;<span class="${cWhite}">18:05</span></div>
+                        <div class="roll-item"><span class="${cCyan}">ISYA'</span>&nbsp;<span class="${cWhite}">19:14</span></div>
+                    </div>
+                </div>
+            `;
+
+            if (cols <= 4) {
+                screen.innerHTML = `
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pr-3 mr-3 border-r-2 border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pr-3 mr-3 border-r-2 border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden w-full">
+                        <div class="${subFontSize} mb-0.5">
+                            ${rollShalatHtml}
+                        </div>
+                        <div class="p10-marquee-box ${subFontSize}">
+                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; RAPATKAN DAN LURUSKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; MATIKAN NADA DERING HP</span>
+                        </div>
+                    </div>`;
+            } else {
+                screen.innerHTML = `
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pr-4 mr-4 border-r-2 border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pr-4 mr-4 border-r-2 border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden w-full h-full">
+                        <div class="flex justify-between items-center w-full ${subFontSize} font-bold mb-1 tracking-wider">
+                            <span><span class="${cCyan}">SUBUH</span> <span class="${cWhite}">04:28</span></span>
+                            <span><span class="${cYellow}">DZUHUR</span> <span class="${cWhite}">11:55</span></span>
+                            <span><span class="${cGreen}">ASHAR</span> <span class="${cWhite}">15:12</span></span>
+                            <span><span class="${cMagenta}">MAGHRIB</span> <span class="${cWhite}">18:05</span></span>
+                            <span><span class="${cCyan}">ISYA'</span> <span class="${cWhite}">19:14</span></span>
+                        </div>
+                        <div class="p10-marquee-box ${subFontSize}">
+                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; SELAMAT DATANG DI MASJID NURUL FALAH &nbsp;•&nbsp; RAPATKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; INFAQ & SEDEKAH DAPAT DISALURKAN MELALUI KOTAK AMAL</span>
+                        </div>
+                    </div>`;
+            }
+        } // Penutup fungsi updateJWSSimulator
+
+        // Parsing String Harga
         function parsePrice(elementId) {
             let val = document.getElementById(elementId).value;
             let cleanVal = val.replace(/\./g, '').replace(/,/g, '');
             return parseFloat(cleanVal) || 0;
         }
 
-        // Format otomatis titik ribuan saat diketik
+        // Format otomatis pemisah ribuan
         document.querySelectorAll('.price-input').forEach(input => {
             input.addEventListener('input', function(e) {
                 let cursorPosition = this.selectionStart;
@@ -150,8 +556,6 @@
                 let formatted = parseInt(rawVal, 10).toLocaleString('id-ID');
                 
                 this.value = formatted;
-                
-                // Menyesuaikan posisi kursor agar tidak loncat ke belakang
                 let newLength = this.value.length;
                 cursorPosition = cursorPosition + (newLength - originalLength);
                 this.setSelectionRange(cursorPosition, cursorPosition);
@@ -160,6 +564,7 @@
             });
         });
 
+        // Perhitungan BOM & Biaya Total
         function hitungKalkulasi() {
             const cols = parseInt(document.getElementById('cols').value) || 0;
             const rows = parseInt(document.getElementById('rows').value) || 0;
@@ -168,7 +573,6 @@
             const useGantungan = document.getElementById('useGantungan').checked;
             const useTempProbe = document.getElementById('useTempProbe').checked;
 
-            // Ambil harga dari input menggunakan parser pemisah ribuan
             const pricePanel = parsePrice('pricePanel');
             const pricePsu = parsePrice('pricePsu');
             const priceController = parsePrice('priceController');
@@ -191,17 +595,20 @@
             const totalPanel = cols * rows;
             const totalWidthCm = cols * panelWidthCm;
             const totalHeightCm = rows * panelHeightCm;
-            const totalPixel = (cols * panelWidthPx) * (rows * panelHeightPx);
 
-            const psuCount = Math.ceil(totalPanel / 5);
+            // Rasio Power Supply: 5 panel per PSU (Single), 3 panel per PSU (RGB Full Color)
+            const psuRatio = (moduleType === 'p10_single') ? 5 : 3;
+            const psuCount = Math.ceil(totalPanel / psuRatio);
 
-            let controllerName = "Controller Wi-Fi Standar";
-            if (connectionType === 'lan') {
-                controllerName = "Controller LAN (RJ45)";
-            } else if (connectionType === 'wifi_lan') {
-                controllerName = "Controller Dual (Wi-Fi + LAN)";
+            let controllerName = "Controller Wi-Fi Standar (Single Color)";
+            if (moduleType.includes('rgb')) {
+                controllerName = (connectionType === 'lan') 
+                    ? "Controller Full Color LAN/RJ45 (HUB75)" 
+                    : (connectionType === 'wifi_lan' ? "Controller Full Color Dual Wi-Fi+LAN (HUB75)" : "Controller Full Color Wi-Fi (HUB75)");
             } else {
-                controllerName = "Controller Wi-Fi";
+                if (connectionType === 'lan') controllerName = "Controller LAN / RJ45 (HUB12)";
+                else if (connectionType === 'wifi_lan') controllerName = "Controller Dual Wi-Fi + LAN (HUB12)";
+                else controllerName = "Controller Wi-Fi (HUB12)";
             }
 
             const kelilingMeter = ((totalWidthCm + totalHeightCm) * 2) / 100;
@@ -243,14 +650,24 @@
             
             document.getElementById('resHpp').innerText = `Rp ${Math.round(totalHpp).toLocaleString('id-ID')}`;
             document.getElementById('resJual').innerText = `Rp ${Math.round(totalJual).toLocaleString('id-ID')}`;
+
+            updateJWSSimulator();
         }
 
-        // Listener untuk elemen selain class price-input (seperti dropdown & jumlah kolom/baris)
-        document.querySelectorAll('input:not(.price-input), select').forEach(element => {
-            element.addEventListener('input', hitungKalkulasi);
+        // Listener perubahan input spesifikasi
+        document.querySelectorAll('input:not(.price-input), select:not(#singleColorPicker)').forEach(element => {
+            element.addEventListener('input', function() {
+                if (this.id === 'moduleType') {
+                    syncPricesByModule();
+                } else {
+                    hitungKalkulasi();
+                }
+            });
         });
 
-        window.onload = hitungKalkulasi;
+        window.onload = function() {
+            hitungKalkulasi();
+        };
     </script>
 </body>
 </html>
