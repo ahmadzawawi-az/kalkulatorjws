@@ -9,7 +9,7 @@
     <!-- Font Digital Seven Segment -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
     <style>
-        /* Efek Dot Matrix LED - Padding diperketat agar pas ke tepi */
+        /* Efek Dot Matrix LED */
         .p10-screen {
             background-color: #020617;
             background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 0);
@@ -19,30 +19,30 @@
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
             white-space: nowrap;
-            padding: 0 !important; /* Hapus semua jarak pinggir luar */
+            padding: 0 !important;
             transition: width 0.25s ease-out, height 0.25s ease-out;
         }
 
-        /* Wadah & Animasi Running Text */
+        /* Wadah & Animasi Running Text Mulus */
         .p10-marquee-box {
             width: 100%;
             overflow: hidden;
             position: relative;
             white-space: nowrap;
-			margin: 0;
-			padding: 0;
+            margin: 0;
+            padding: 0;
         }
         .p10-marquee-text {
             display: inline-block;
             padding-left: 100%;
-            animation: p10-scroll 22s linear infinite;
+            animation: p10-scroll 24s linear infinite;
         }
         @keyframes p10-scroll {
             0%   { transform: translateX(0); }
             100% { transform: translateX(-100%); }
         }
 
-        /* Viewport Roll Up Vertikal */
+        /* Viewport Roll Up */
         .roll-viewport {
             height: 20px;
             overflow: hidden;
@@ -50,11 +50,11 @@
             width: 100%;
         }
 
-        /* Roll 5 Jadwal Bergantian (Untuk Panel 3-4) */
-        .roll-content-5 {
+        /* Roll 2 Jadwal Berdampingan (3x Siklus untuk Panel 3-4) */
+        .roll-content-3step {
             display: flex;
             flex-direction: column;
-            animation: roll-vertical-5 15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+            animation: roll-vertical-3step 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
         .roll-item {
             height: 20px;
@@ -62,16 +62,14 @@
             display: flex;
             align-items: center;
         }
-        @keyframes roll-vertical-5 {
-            0%, 15%   { transform: translateY(0); }
-            20%, 35%  { transform: translateY(-20px); }
-            40%, 55%  { transform: translateY(-40px); }
-            60%, 75%  { transform: translateY(-60px); }
-            80%, 95%  { transform: translateY(-80px); }
+        @keyframes roll-vertical-3step {
+            0%, 28%   { transform: translateY(0); }
+            33%, 61%  { transform: translateY(-20px); }
+            66%, 94%  { transform: translateY(-40px); }
             100%      { transform: translateY(0); }
         }
 
-        /* Roll 2 Grup untuk 5 Panel (Subuh-Dzuhur-Ashar lalu Maghrib-Isya) */
+        /* Roll 2 Grup untuk 5 Panel */
         .roll-content-2grp {
             display: flex;
             flex-direction: column;
@@ -126,7 +124,6 @@
             align-items: center;
             width: 100%;
         }
-
         @keyframes cycle-stages-2p {
             0%, 12.5%    { transform: translateY(0); }
             16.6%, 29.1% { transform: translateY(-48px); }
@@ -136,6 +133,18 @@
             83.3%, 97%   { transform: translateY(-240px); }
             100%         { transform: translateY(0); }
         }
+		
+		/* Roll 3 Jadwal Sekaligus (2x Siklus untuk Panel 4) */
+		.roll-content-2step {
+			display: flex;
+			flex-direction: column;
+			animation: roll-vertical-2step 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+		}
+		@keyframes roll-vertical-2step {
+			0%, 45%   { transform: translateY(0); }       /* Siklus 1: SBH, DHR, ASR */
+			52%, 93%  { transform: translateY(-20px); }   /* Siklus 2: MGR, ISY, SRQ */
+			100%      { transform: translateY(0); }
+		}
 
         /* Tampilan Font Digital 7-Segment */
         .seven-seg {
@@ -143,6 +152,7 @@
             font-style: italic;
             letter-spacing: 0px !important;
         }
+		
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -156,7 +166,7 @@
             <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold tracking-wider text-slate-300 uppercase">🖥️ Simulasi Visual Display</span>
-                    <span id="simulatorTag" class="text-xs bg-blue-600 text-white font-semibold px-2 py-0.5 rounded">7 Kolom x 1 Baris</span>
+                    <span id="simulatorTag" class="text-xs bg-blue-600 text-white font-semibold px-2 py-0.5 rounded">4 Kolom x 1 Baris</span>
                 </div>
 
                 <!-- Panel Pengaturan Tampilan Realtime -->
@@ -187,11 +197,11 @@
             </div>
             
             <div class="overflow-x-auto p-2 bg-black rounded-lg flex justify-center items-center min-h-[140px]">
-                <div id="p10Screen" class="p10-screen flex items-center px-0 box-border">
+                <div id="p10Screen" class="p10-screen flex items-center p-0 box-border overflow-hidden">
                     <!-- Konten simulator di-generate via JavaScript -->
                 </div>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1 text-center">*Font jam utama seven-segment digital. Titik dua pada format HH:mm berkedip per detik.</p>
+            <p class="text-[11px] text-slate-400 mt-2 text-center">*Font jam utama seven-segment digital. Titik dua pada format HH:mm berkedip per detik.</p>
         </div>
         <!-- ========================================================= -->
 
@@ -203,7 +213,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Kolom (Samping)</label>
-                        <input type="number" id="cols" value="6" min="1" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="cols" value="4" min="1" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Baris (Bawah)</label>
@@ -405,7 +415,7 @@
             };
         }
 
-        // Update HANYA jam setiap detik (mencegah marquee me-reset animasi)
+        // Update HANYA jam setiap detik
         function updateClockOnly() {
             const clockEl = document.getElementById('liveClock');
             if (!clockEl) return;
@@ -436,7 +446,7 @@
                 tag.innerText = `${cols} Kolom x ${rows} Baris (${cols * 32} x ${rows * 16} cm)`;
             }
 
-            // Skala modul P10: rasio rapat tanpa sisa ruang kosong berlebih
+            // Skala modul P10
             const baseWidthPerCol = 100;
             const baseHeightPerRow = 52;
             screen.style.width = `${cols * baseWidthPerCol}px`;
@@ -477,8 +487,8 @@
 
                 screen.innerHTML = `
                     <div class="flex items-center w-full h-full justify-between">
-                        <!-- Kiri: Jam Jumbo Digital pas batas divider -->
-                        <div id="liveClock" data-base-class="seven-seg text-3xl pr-1.5 mr-1.5 border-r border-slate-700 flex-shrink-0" class="seven-seg text-3xl pr-1.5 mr-1.5 border-r border-slate-700 flex-shrink-0 ${cWhite}">
+                        <!-- Kiri: Jam Jumbo Digital (Jam & Menit) -->
+                        <div id="liveClock" data-base-class="seven-seg text-3xl pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0" class="seven-seg text-3xl pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 ${cWhite}">
                             ${clockHM}
                         </div>
 
@@ -510,67 +520,106 @@
 
             const clockFontSize = (rows > 1) ? 'text-5xl' : 'text-4xl';
 
-            if (cols <= 4) {
-                // 3 & 4 Panel: 1 per 1 rolling sholat
+            // ================= 3 PANEL =================
+            if (cols === 3) {
+                // 3 Panel: 2 Jadwal Shalat Sekaligus (3x Putaran)
                 screen.innerHTML = `
-                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
-                    <div class="flex flex-col justify-center overflow-hidden w-full">
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden flex-1 h-full px-1">
                         <div class="roll-viewport ${subFontSize} mb-0.5">
-                            <div class="roll-content-5 font-bold">
-                                <div class="roll-item"><span class="${cCyan}">SUBUH</span>&nbsp;<span class="${cWhite}">04:28</span></div>
-                                <div class="roll-item"><span class="${cYellow}">DZUHUR</span>&nbsp;<span class="${cWhite}">11:55</span></div>
-                                <div class="roll-item"><span class="${cGreen}">ASHAR</span>&nbsp;<span class="${cWhite}">15:12</span></div>
-                                <div class="roll-item"><span class="${cMagenta}">MAGHRIB</span>&nbsp;<span class="${cWhite}">18:05</span></div>
-                                <div class="roll-item"><span class="${cCyan}">ISYA'</span>&nbsp;<span class="${cWhite}">19:14</span></div>
+                            <div class="roll-content-3step font-bold text-[11px]">
+                                <!-- Putaran 1: Subuh & Dzuhur -->
+                                <div class="roll-item flex justify-between w-full pr-1">
+                                    <span><span class="${cCyan}">SBH</span> <span class="${cWhite}">04:28</span></span>
+                                    <span><span class="${cYellow}">DHR</span> <span class="${cWhite}">11:55</span></span>
+                                </div>
+                                <!-- Putaran 2: Ashar & Maghrib -->
+                                <div class="roll-item flex justify-between w-full pr-1">
+                                    <span><span class="${cGreen}">ASR</span> <span class="${cWhite}">15:12</span></span>
+                                    <span><span class="${cMagenta}">MGR</span> <span class="${cWhite}">18:05</span></span>
+                                </div>
+                                <!-- Putaran 3: Isya & Syuruq -->
+                                <div class="roll-item flex justify-between w-full pr-1">
+                                    <span><span class="${cCyan}">ISY</span> <span class="${cWhite}">19:14</span></span>
+                                    <span><span class="${cYellow}">SRQ</span> <span class="${cWhite}">05:45</span></span>
+                                </div>
                             </div>
                         </div>
-                        <div class="p10-marquee-box ${subFontSize}">
+                        <div class="p10-marquee-box text-[11px]">
                             <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; RAPATKAN DAN LURUSKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; MATIKAN NADA DERING HP</span>
                         </div>
                     </div>`;
-            } else if (cols === 5) {
-                // KHUSUS 5 PANEL: Tampil 2 grup bergantian secara roll-up (Grup 1: Subuh-Dzuhur-Ashar, Grup 2: Maghrib-Isya)
+                return;
+            }
+
+            // ================= 4 PANEL =================
+            if (cols === 4) {
+                // 4 Panel: 3 Jadwal Shalat Sekaligus (Hanya 2x Putaran, Jarak Padat & Rapi)
                 screen.innerHTML = `
-                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
-                    <div class="flex flex-col justify-center overflow-hidden w-full h-full">
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden flex-1 h-full px-1">
+                        <div class="roll-viewport ${subFontSize} mb-0.5">
+                            <div class="roll-content-2step font-bold text-[11px]">
+                                <!-- Putaran 1: Subuh, Dzuhur, Ashar -->
+                                <div class="roll-item flex justify-between w-full pr-1">
+                                    <span><span class="${cCyan}">SBH</span> <span class="${cWhite}">04:28</span></span>
+                                    <span><span class="${cYellow}">DHR</span> <span class="${cWhite}">11:55</span></span>
+                                    <span><span class="${cGreen}">ASR</span> <span class="${cWhite}">15:12</span></span>
+                                </div>
+                                <!-- Putaran 2: Maghrib, Isya', Syuruq -->
+                                <div class="roll-item flex justify-between w-full pr-1">
+                                    <span><span class="${cMagenta}">MGR</span> <span class="${cWhite}">18:05</span></span>
+                                    <span><span class="${cCyan}">ISY</span> <span class="${cWhite}">19:14</span></span>
+                                    <span><span class="${cYellow}">SRQ</span> <span class="${cWhite}">05:45</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p10-marquee-box text-[11px]">
+                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; RAPATKAN DAN LURUSKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; MATIKAN NADA DERING HP</span>
+                        </div>
+                    </div>`;
+                return;
+            
+            } else if (cols === 5) {
+                // 5 Panel: 2 grup bergantian secara roll-up
+                screen.innerHTML = `
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden flex-1 h-full px-1">
                         <div class="roll-viewport ${subFontSize} font-bold mb-0.5">
                             <div class="roll-content-2grp">
-                                <!-- Grup 1 (3 Jadwal Awal) -->
                                 <div class="roll-item flex justify-around w-full">
                                     <span><span class="${cCyan}">SUBUH</span> <span class="${cWhite}">04:28</span></span>
                                     <span><span class="${cYellow}">DZUHUR</span> <span class="${cWhite}">11:55</span></span>
                                     <span><span class="${cGreen}">ASHAR</span> <span class="${cWhite}">15:12</span></span>
                                 </div>
-                                <!-- Grup 2 (2 Jadwal Akhir) -->
                                 <div class="roll-item flex justify-around w-full">
                                     <span><span class="${cMagenta}">MAGHRIB</span> <span class="${cWhite}">18:05</span></span>
                                     <span><span class="${cCyan}">ISYA'</span> <span class="${cWhite}">19:14</span></span>
                                 </div>
                             </div>
                         </div>
-                        <div class="p10-marquee-box ${subFontSize}">
-                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; SELAMAT DATANG &nbsp;•&nbsp; RAPATKAN SHAF SEBELUM SHALAT</span>
+                        <div class="p10-marquee-box text-[11px]">
+                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; SELAMAT DATANG DI MASJID NURUL FALAH &nbsp;•&nbsp; RAPATKAN SHAF SEBELUM SHALAT</span>
                         </div>
                     </div>`;
             } else {
-                // 6 Panel ke Atas: Cukup luas untuk menampilkan kelima waktu shalat sejajar
+                // 6 Panel ke Atas: 5 waktu shalat sejajar merata
                 screen.innerHTML = `
-                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pr-2 mr-2 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
-                    <div class="flex flex-col justify-center overflow-hidden w-full h-full">
-                        <div class="flex justify-between items-center w-full ${subFontSize} font-bold mb-1 tracking-wider">
+                    <div id="liveClock" data-base-class="seven-seg ${clockFontSize} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none" class="seven-seg ${clockFontSize} ${cWhite} pl-1 pr-1.5 border-r border-slate-700 flex-shrink-0 leading-none">${initialClock}</div>
+                    <div class="flex flex-col justify-center overflow-hidden flex-1 h-full px-1">
+                        <div class="flex justify-between items-center w-full text-[10.5px] font-bold mb-0.5 tracking-tight">
                             <span><span class="${cCyan}">SUBUH</span> <span class="${cWhite}">04:28</span></span>
                             <span><span class="${cYellow}">DZUHUR</span> <span class="${cWhite}">11:55</span></span>
                             <span><span class="${cGreen}">ASHAR</span> <span class="${cWhite}">15:12</span></span>
                             <span><span class="${cMagenta}">MAGHRIB</span> <span class="${cWhite}">18:05</span></span>
                             <span><span class="${cCyan}">ISYA'</span> <span class="${cWhite}">19:14</span></span>
                         </div>
-                        <div class="p10-marquee-box ${subFontSize}">
-                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; SELAMAT DATANG &nbsp;•&nbsp; RAPATKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; INFAQ & SEDEKAH DAPAT DISALURKAN MELALUI KOTAK AMAL</span>
+                        <div class="p10-marquee-box text-[11px]">
+                            <span class="p10-marquee-text ${cBlue}">${dateFull} &nbsp;•&nbsp; SELAMAT DATANG DI MASJID NURUL FALAH &nbsp;•&nbsp; RAPATKAN SHAF SEBELUM SHALAT &nbsp;•&nbsp; INFAQ & SEDEKAH DAPAT DISALURKAN MELALUI KOTAK AMAL</span>
                         </div>
                     </div>`;
-            
             }
-        } // Penutup fungsi updateJWSSimulator
+        }
 
         // Parsing String Harga
         function parsePrice(elementId) {
@@ -634,7 +683,6 @@
             const totalWidthCm = cols * panelWidthCm;
             const totalHeightCm = rows * panelHeightCm;
 
-            // Rasio Power Supply: 5 panel per PSU (Single), 3 panel per PSU (RGB Full Color)
             const psuRatio = (moduleType === 'p10_single') ? 5 : 3;
             const psuCount = Math.ceil(totalPanel / psuRatio);
 
